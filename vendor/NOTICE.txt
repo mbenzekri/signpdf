@@ -1,0 +1,25 @@
+Bibliotheques locales de l'application Signature PDF
+
+Conserver ce dossier a cote de "App Signature PDF.html".
+Aucune installation ni connexion Internet n'est necessaire a l'utilisation.
+
+PDF.js 4.10.38 (Mozilla, licence Apache-2.0 : pdfjs/LICENSE)
+Sources distribuees :
+https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs
+https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs
+
+Les fichiers .mjs sont les distributions d'origine. Les fichiers .js sont
+compiles avec esbuild 0.24.2 pour permettre l'ouverture directe du HTML.
+Commandes de reconstruction, depuis la racine du projet :
+npm exec --yes --package=esbuild@0.24.2 -- esbuild vendor/pdfjs/pdf.min.mjs --bundle --format=iife --global-name=pdfjsLib --outfile=vendor/pdfjs/pdf.min.js --target=es2022 --minify
+npm exec --yes --package=esbuild@0.24.2 -- esbuild vendor/pdfjs/pdf.worker.min.mjs --bundle --format=iife --global-name=pdfjsWorker --outfile=vendor/pdfjs/pdf.worker.min.js --target=es2022 --minify
+
+En ouverture directe (file:), le worker est charge comme script local et
+PDF.js execute son traitement sur le thread principal. En HTTP(S), le
+worker .mjs s'execute dans un thread separe.
+
+pdf-lib 1.17.1 (Andrew Dillon, licence MIT : pdf-lib/LICENSE)
+Distribution autonome, incluant ses dependances :
+https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js
+
+Les adresses ci-dessus documentent les sources ; l'application ne les charge pas.

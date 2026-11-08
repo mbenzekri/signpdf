@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ajouter des images à un PDF — local</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#172033;background:#f3f5f9}*{box-sizing:border-box}body{margin:0}header{background:#18253e;color:white;padding:20px 24px}h1{font-size:22px;margin:0 0 6px}header p{margin:0;color:#cbd5e1;font-size:13px}.layout{display:grid;grid-template-columns:310px minmax(0,1fr);gap:20px;max-width:1450px;margin:20px auto;padding:0 16px}aside,.viewer{background:white;border-radius:14px;padding:18px;box-shadow:0 3px 16px #17203310}aside{align-self:start}label{font-weight:650;font-size:13px;display:block;margin:14px 0 6px}input[type=file]{width:100%;font-size:12px}button{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:9px 12px;cursor:pointer;font-weight:600;color:#24334d}button:disabled{opacity:.45;cursor:not-allowed}.primary{background:#2157cf;color:white;border-color:#2157cf;width:100%;margin-top:18px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions button{flex:1}.muted{color:#64748b;font-size:12px;line-height:1.55}.status{font-size:12px;padding:10px;border-radius:8px;background:#eff6ff;margin-top:12px;white-space:pre-wrap}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.toolbar span{font-size:13px}.pagewrap{background:#e9edf3;border-radius:10px;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:18px;min-height:400px}.paper{position:relative;flex:none;background:white;box-shadow:0 2px 14px #0002;touch-action:none}.paper canvas{display:block;width:100%;height:100%}.stamp{position:absolute;cursor:move;touch-action:none;border:2px dashed #2563eb;background:#dbeafe33;user-select:none}.stamp img{width:100%;height:100%;display:block;pointer-events:none;object-fit:fill}.stamp.selected{border:2px solid #ef4444}.stamp .handle{position:absolute;right:-7px;bottom:-7px;width:15px;height:15px;background:#ef4444;border-radius:50%;cursor:nwse-resize}.small{font-size:12px}.warn{background:#fff7ed;color:#9a3412;padding:10px;border-radius:8px;font-size:12px;margin-top:12px}.section{border-top:1px solid #e2e8f0;margin-top:16px;padding-top:8px}@media(max-width:820px){.layout{grid-template-columns:1fr}.pagewrap{padding:8px}aside{order:1}.viewer{order:2}}
+.image-list{display:grid;gap:10px;margin-top:12px}.image-item{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;align-items:center;border:1px solid #e2e8f0;border-radius:8px;padding:8px}.image-item img{width:48px;height:48px;object-fit:contain;background:#f3f5f9;border-radius:4px}.image-details{min-width:0}.image-name{display:block;font-size:12px;overflow-wrap:anywhere;margin-bottom:6px}.image-item button{font-size:12px;padding:6px 8px}
+.stamp{transform-origin:center}.stamp .rotate-handle{position:absolute;left:-13px;top:-13px;width:24px;height:24px;padding:0;border:1px solid white;border-radius:50%;background:#2563eb;color:white;font-size:19px;line-height:22px;cursor:grab;touch-action:none}.stamp .rotate-handle:active{cursor:grabbing}.stamp .rotate-handle:focus-visible{outline:2px solid #172033;outline-offset:2px}
+</style></head><body><header><h1>Images sur PDF</h1><p>Traitement dans votre navigateur · Original conservé · Ajouts uniquement</p></header>
+<main class="layout"><aside>
+<label for="pdf">1. Document PDF</label><input id="pdf" type="file" accept="application/pdf,.pdf">
+<label for="images">2. Images PNG</label><input id="images" type="file" accept="image/png,.png" multiple>
+<p class="muted">Sélectionnez une ou plusieurs images. Vous pouvez en importer d'autres à tout moment, sans limite de nombre imposée.</p>
+<div class="section"><label>3. Ajouter sur la page affichée</label><p class="muted" id="emptyImages">Aucune image importée.</p><div class="image-list" id="imageList"></div><p class="muted">Chaque image peut être ajoutée plusieurs fois. Déplacez-la par glisser-déposer. Pour changer sa taille, tirez le point rouge en bas à droite. Pour la faire pivoter, faites glisser le bouton bleu ↻ en haut à gauche, ou cliquez dessus pour tourner de 15°. Sélectionnez l'image pour la supprimer si besoin.</p><div class="actions"><button id="delete" disabled>Supprimer l'ajout sélectionné</button></div></div>
+<div class="section"><label>4. Exporter</label><button class="primary" id="export" disabled>Télécharger le PDF complété</button><p class="muted">Les pages, le texte et les objets d'origine ne sont pas volontairement modifiés. Une nouvelle copie PDF est créée.</p></div>
+<div class="warn">Confidentialité : aucun fichier n'est téléversé par cette page. Les bibliothèques PDF sont incluses localement. L'application fonctionne sans connexion Internet. Conservez le dossier vendor à côté de ce fichier HTML.</div>
+<div class="status" id="status" role="status">Chargez un PDF pour commencer.</div>
+</aside><section class="viewer"><div class="toolbar"><button id="prev" disabled>← Précédente</button><span id="counter">Aucun document</span><button id="next" disabled>Suivante →</button><span style="flex:1"></span><button id="zoomOut" disabled>−</button><span id="zoomLabel">100 %</span><button id="zoomIn" disabled>+</button></div><div class="pagewrap" id="pagewrap"><div class="paper" id="paper"><canvas id="canvas"></canvas></div></div><p class="muted">Les images sont positionnées sur la page affichée. Changez de page pour ajouter d'autres images. Vérifiez toutes les pages avant de partager le PDF.</p></section></main>
+<script src="./vendor/pdfjs/pdf.min.js"></script>
+<script src="./vendor/pdf-lib/pdf-lib.min.js"></script>
+<script>
+const { PDFDocument, degrees } = PDFLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc='./vendor/pdfjs/pdf.worker.min.mjs';
+// Les navigateurs bloquent les workers de fichier en ouverture directe (file:).
+// Dans ce cas, PDF.js utilise son worker sur le thread principal.
+let localWorkerReady;
+function ensurePDFWorker(){
+  if(location.protocol!=='file:')return Promise.resolve();
+  if(!localWorkerReady)localWorkerReady=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src='./vendor/pdfjs/pdf.worker.min.js';
+    script.onload=resolve;
+    script.onerror=()=>{localWorkerReady=null;reject(new Error('Bibliothèque PDF locale introuvable. Conservez le dossier vendor à côté du fichier HTML.'));};
+    document.head.append(script);
+  });
+  return localWorkerReady;
+}
+const $=id=>document.getElementById(id), status=t=>$('status').textContent=t;
+let originalBytes=null, pdf=null, current=1, zoom=1, stamps=[], selected=null, filename='document.pdf', renderId=0;
+const images=new Map();
+const controls=['prev','next','zoomOut','zoomIn','export'];
+function updateControls(){const ready=!!pdf;for(const id of controls)$(id).disabled=!ready;$('prev').disabled=!ready||current<=1;$('next').disabled=!ready||current>=pdf.numPages;for(const button of $('imageList').querySelectorAll('button'))button.disabled=!ready;$('delete').disabled=!selected;$('counter').textContent=ready?`Page ${current} / ${pdf.numPages}`:'Aucun document';$('zoomLabel').textContent=`${Math.round(zoom*100)} %`;}
+async function loadPNG(file){
+  if(file.type!=='image/png'&&!file.name.toLowerCase().endsWith('.png'))throw new Error('format PNG requis');
+  const data=await new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(new Error('lecture impossible'));
+    reader.readAsDataURL(file);
+  });
+  const img=new Image();
+  await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('image PNG invalide'));img.src=data;});
+  const image={id:crypto.randomUUID(),name:file.name,data,width:img.naturalWidth,height:img.naturalHeight};
+  images.set(image.id,image);
+  const item=document.createElement('div');item.className='image-item';
+  const preview=document.createElement('img');preview.src=data;preview.alt='';
+  const details=document.createElement('div');details.className='image-details';
+  const name=document.createElement('span');name.className='image-name';name.textContent=image.name;
+  const button=document.createElement('button');button.type='button';button.textContent='+ Ajouter';button.setAttribute('aria-label',`Ajouter ${image.name} sur la page affichée`);button.onclick=()=>add(image.id);
+  details.append(name,button);item.append(preview,details);$('imageList').append(item);
+  $('emptyImages').hidden=true;updateControls();
+}
+$('images').onchange=async e=>{
+  const input=e.target,files=Array.from(input.files);if(!files.length)return;
+  input.disabled=true;let loaded=0;const errors=[];
+  try{
+    for(const file of files){try{await loadPNG(file);loaded++;}catch(err){errors.push(`${file.name} : ${err.message}`);}}
+    status(`${loaded} image(s) importée(s). ${images.size} disponible(s).${errors.length?'\n'+errors.join('\n'):''}`);
+  }finally{input.value='';input.disabled=false;}
+};
+$('pdf').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{status('Ouverture du PDF…');await ensurePDFWorker();originalBytes=await f.arrayBuffer();filename=f.name;pdf=await pdfjsLib.getDocument({data:new Uint8Array(originalBytes.slice(0))}).promise;current=1;zoom=1;stamps=[];selected=null;await render();status(`Document chargé : ${pdf.numPages} page(s). Les originaux ne seront pas écrasés.`);}catch(err){pdf=null;status(`Impossible d'ouvrir le PDF : ${err.message}`);updateControls();}};
+async function render(){if(!pdf)return;const token=++renderId;const page=await pdf.getPage(current);const base=page.getViewport({scale:1});const available=Math.max(260,$('pagewrap').clientWidth-38);const scale=Math.min(1.5,available/base.width)*zoom;const viewport=page.getViewport({scale});const paper=$('paper'),canvas=$('canvas');paper.style.width=viewport.width+'px';paper.style.height=viewport.height+'px';canvas.width=Math.ceil(viewport.width*devicePixelRatio);canvas.height=Math.ceil(viewport.height*devicePixelRatio);canvas.style.width=viewport.width+'px';canvas.style.height=viewport.height+'px';const ctx=canvas.getContext('2d');await page.render({canvasContext:ctx,viewport,transform:[devicePixelRatio,0,0,devicePixelRatio,0,0]}).promise;if(token!==renderId)return;paper.querySelectorAll('.stamp').forEach(n=>n.remove());selected=null;for(const s of stamps.filter(x=>x.page===current))makeStamp(s);updateControls();}
+function select(s){selected=s;document.querySelectorAll('.stamp').forEach(n=>n.classList.toggle('selected',n.dataset.id===s?.id));updateControls();}
+function keepStampOnPage(s){
+  const p=$('paper'),r=s.angle*Math.PI/180,c=Math.abs(Math.cos(r)),t=Math.abs(Math.sin(r));
+  let w=s.w*p.clientWidth,h=s.h*p.clientHeight;
+  let cx=(s.x+s.w/2)*p.clientWidth,cy=(s.y+s.h/2)*p.clientHeight;
+  const factor=Math.min(1,p.clientWidth/(c*w+t*h),p.clientHeight/(t*w+c*h));
+  w*=factor;h*=factor;s.w=w/p.clientWidth;s.h=h/p.clientHeight;
+  const halfX=(c*w+t*h)/2,halfY=(t*w+c*h)/2;
+  cx=Math.max(halfX,Math.min(p.clientWidth-halfX,cx));
+  cy=Math.max(halfY,Math.min(p.clientHeight-halfY,cy));
+  s.x=cx/p.clientWidth-s.w/2;s.y=cy/p.clientHeight-s.h/2;
+}
+function makeStamp(s){
+  const el=document.createElement('div');el.className='stamp';el.dataset.id=s.id;
+  const image=images.get(s.imageId),img=document.createElement('img');img.src=image.data;img.alt=image.name;el.append(img);
+  const handle=document.createElement('div');handle.className='handle';el.append(handle);
+  const rotate=document.createElement('button');rotate.type='button';rotate.className='rotate-handle';rotate.textContent='↻';
+  rotate.title='Faire pivoter : glisser, ou cliquer pour tourner de 15°';rotate.setAttribute('aria-label',`Faire pivoter ${image.name} de 15° ou glisser pour ajuster`);el.append(rotate);
+  $('paper').append(el);
+  const position=()=>{
+    const p=$('paper');el.style.left=s.x*p.clientWidth+'px';el.style.top=s.y*p.clientHeight+'px';
+    el.style.width=s.w*p.clientWidth+'px';el.style.height=s.h*p.clientHeight+'px';el.style.transform=`rotate(${s.angle}deg)`;
+  };
+  const rotateTo=angle=>{s.angle=(angle%360+360)%360;keepStampOnPage(s);position();status(`Rotation : ${Math.round(s.angle)}°.`);};
+  let rotationDragged=false;
+  rotate.onclick=()=>{if(!rotationDragged){select(s);rotateTo(s.angle+15);}rotationDragged=false;};
+  position();
+  el.addEventListener('pointerdown',e=>{
+    if(e.button!==0)return;
+    e.preventDefault();select(s);
+    const resize=e.target===handle,rotating=e.target===rotate,rect=$('paper').getBoundingClientRect();
+    const start={px:e.clientX,py:e.clientY,x:s.x,y:s.y,w:s.w,h:s.h,angle:s.angle};
+    const cx=rect.left+(start.x+start.w/2)*rect.width,cy=rect.top+(start.y+start.h/2)*rect.height;
+    const pointerAngle=Math.atan2(e.clientY-cy,e.clientX-cx),r=start.angle*Math.PI/180,c=Math.cos(r),t=Math.sin(r);
+    if(rotating)rotationDragged=false;
+    // Conserver la capture sur le bouton pour que son clic reste accessible.
+    const capture=rotating?rotate:el;capture.setPointerCapture(e.pointerId);
+    const move=ev=>{
+      const dx=ev.clientX-start.px,dy=ev.clientY-start.py;
+      if(rotating){
+        if(Math.hypot(dx,dy)>3)rotationDragged=true;
+        if(rotationDragged)rotateTo(start.angle+(Math.atan2(ev.clientY-cy,ev.clientX-cx)-pointerAngle)*180/Math.PI);
+        return;
+      }
+      if(resize){
+        const width=start.w*rect.width,height=start.h*rect.height;
+        const localX=dx*c+dy*t,localY=-dx*t+dy*c;
+        const factor=Math.max(.02/start.w,.01/start.h,Math.min(5,1+(localX*width+localY*height)/(width*width+height*height)));
+        s.w=start.w*factor;s.h=start.h*factor;
+        // Garder le coin oppose au redimensionnement immobile, meme apres rotation.
+        s.x=start.x+(c*(s.w-start.w)*rect.width-t*(s.h-start.h)*rect.height)/(2*rect.width)-(s.w-start.w)/2;
+        s.y=start.y+(t*(s.w-start.w)*rect.width+c*(s.h-start.h)*rect.height)/(2*rect.height)-(s.h-start.h)/2;
+      }else{s.x=start.x+dx/rect.width;s.y=start.y+dy/rect.height;}
+      keepStampOnPage(s);position();
+    };
+    const end=ev=>{
+      capture.removeEventListener('pointermove',move);capture.removeEventListener('pointerup',end);capture.removeEventListener('pointercancel',end);
+      if(capture.hasPointerCapture(ev.pointerId))capture.releasePointerCapture(ev.pointerId);
+      if(ev.type==='pointercancel')rotationDragged=false;
+    };
+    capture.addEventListener('pointermove',move);capture.addEventListener('pointerup',end);capture.addEventListener('pointercancel',end);
+  });
+}
+function add(imageId){
+  const image=images.get(imageId);if(!pdf||!image)return;
+  let w=.22,h=w*image.height/image.width*($('paper').clientWidth/$('paper').clientHeight);
+  if(h>.18){w*=.18/h;h=.18;}
+  const s={id:crypto.randomUUID(),imageId,page:current,x:.5-w/2,y:.5-h/2,w,h,angle:0};
+  stamps.push(s);makeStamp(s);select(s);status(`${image.name} ajouté sur la page ${current}. Placez l'image à l'endroit souhaité.`);
+}
+$('delete').onclick=()=>{if(!selected)return;stamps=stamps.filter(s=>s!==selected);selected=null;render();};$('prev').onclick=()=>{if(current>1){current--;render()}};$('next').onclick=()=>{if(current<pdf.numPages){current++;render()}};$('zoomOut').onclick=()=>{zoom=Math.max(.5,zoom-.2);render()};$('zoomIn').onclick=()=>{zoom=Math.min(2.5,zoom+.2);render()};
+$('export').onclick=async()=>{
+  if(!pdf||!originalBytes)return;
+  try{
+    status('Création de la copie PDF…');
+    const out=await PDFDocument.load(originalBytes.slice(0),{updateMetadata:false});
+    const pages=out.getPages(),cache=new Map();
+    for(const s of stamps){
+      if(!cache.has(s.imageId))cache.set(s.imageId,await out.embedPng(images.get(s.imageId).data));
+      const p=pages[s.page-1],{width,height}=p.getSize(),w=s.w*width,h=s.h*height;
+      const cx=(s.x+s.w/2)*width,cy=(1-s.y-s.h/2)*height;
+      // Le PDF tourne dans le sens inverse de l'ecran et autour du coin inferieur gauche.
+      const angle=-s.angle,r=angle*Math.PI/180,c=Math.cos(r),t=Math.sin(r);
+      p.drawImage(cache.get(s.imageId),{x:cx-c*w/2+t*h/2,y:cy-t*w/2-c*h/2,width:w,height:h,rotate:degrees(angle)});
+    }
+    const bytes=await out.save(),blob=new Blob([bytes],{type:'application/pdf'}),url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=filename.replace(/\.pdf$/i,'')+'_complete.pdf';
+    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    status(`Copie créée avec ${stamps.length} ajout(s). L'original n'a pas été écrasé.`);
+  }catch(err){status(`Export impossible : ${err.message}. Certains PDF protégés ou dotés de signatures existantes nécessitent un traitement particulier.`);}
+};
+window.addEventListener('resize',()=>{if(pdf)render()});updateControls();
+</script></body></html>

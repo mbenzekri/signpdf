@@ -1,0 +1,12 @@
+# Documents et images de travail, conserves localement
+/*.pdf
+/*.png
+
+# Configuration locale et fichiers temporaires
+.env
+.env.*
+!.env.example
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
