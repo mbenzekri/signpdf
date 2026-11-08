@@ -1,6 +1,6 @@
 Bibliotheques locales de l'application Signature PDF
 
-Conserver ce dossier a cote de "App Signature PDF.html".
+Conserver ce dossier a cote de "index.html".
 Aucune installation ni connexion Internet n'est necessaire a l'utilisation.
 
 PDF.js 4.10.38 (Mozilla, licence Apache-2.0 : pdfjs/LICENSE)

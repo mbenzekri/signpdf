@@ -2,10 +2,12 @@
 
 Application locale pour ajouter des images PNG sur les pages d'un PDF, les déplacer, les redimensionner et les faire pivoter, puis télécharger une nouvelle copie du document.
 
+Application en ligne : [mbenzekri.github.io/signpdf](https://mbenzekri.github.io/signpdf/).
+
 ## Utilisation
 
 1. Téléchargez ou clonez le dépôt complet.
-2. Ouvrez `App Signature PDF.html` dans votre navigateur. Conservez le dossier `vendor` à côté du fichier HTML.
+2. Ouvrez `index.html` dans votre navigateur. Conservez le dossier `vendor` à côté du fichier HTML. L'ancien fichier `App Signature PDF.html` redirige également vers l'application.
 3. Chargez un PDF et importez une ou plusieurs images PNG. De nouveaux imports enrichissent la liste existante.
 4. Cliquez sur **Ajouter** pour placer une image sur la page affichée. Chaque image peut être utilisée plusieurs fois.
 5. Déplacez l'image par glisser-déposer. Le rond rouge en bas à droite permet de la redimensionner ; le bouton bleu en haut à gauche permet de la faire pivoter par glissement ou par clics de 15°.
@@ -14,6 +16,10 @@ Application locale pour ajouter des images PNG sur les pages d'un PDF, les dépl
 Le traitement reste dans le navigateur. L'application fonctionne hors ligne, sans installation ni chargement externe de bibliothèques. Les documents et images ne sont pas téléversés.
 
 Les images ajoutées peuvent représenter une signature ou un paraphe ; l'application ne crée pas de signature numérique cryptographique.
+
+## GitHub Pages
+
+Le site est publié depuis la branche `main`, dossier racine `/`. Le fichier `index.html` est le point d'entrée de l'application. Le fichier `.nojekyll` permet de servir directement les fichiers statiques et les bibliothèques du dossier `vendor`.
 
 ## Bibliothèques incluses
 
